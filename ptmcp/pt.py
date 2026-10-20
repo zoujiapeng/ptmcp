@@ -104,6 +104,8 @@ def build(spec: dict, new: bool = True, save_to: str | None = None) -> dict:
       "cli":     {"S1": ["vlan 2", "name VLAN2", "exit"], ...}
     }
     """
+    from .precheck import precheck as _pre
+    pre = _pre(spec, live=not new)
     types: dict[str, int] = {}
     for dev in spec.get("devices", []):
         types[dev["name"]] = device_type(dev["model"])
@@ -174,7 +176,11 @@ def build(spec: dict, new: bool = True, save_to: str | None = None) -> dict:
 })();""")
     lines.append('throw new Error(log.join(" | "));')
 
-    report = {"build": ask("\n".join(lines), timeout=float(spec.get("timeout", 90)))}
+    report = {
+        "precheck": {"ok": pre["ok"], "errors": pre["errors"], "warnings": pre["warnings"],
+                     "issues": pre["issues"][:8]},
+        "build": ask("\n".join(lines), timeout=float(spec.get("timeout", 90))),
+    }
     failed = [seg.split(" -> ")[0].strip().strip("link ")
               for seg in report["build"].split("|") if seg.strip().endswith("-> false")]
     if failed:
@@ -322,3 +328,5 @@ throw new Error(out.join(";"));
             "b": f"{f[5]}:{f[6]}", "b_up": f[7] == "1", "b_mode": int(f[8]), "b_vlan": int(f[9]),
         })
     return {"links": rows}
+
+

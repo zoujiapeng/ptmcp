@@ -1,0 +1,12 @@
+{
+  "devices": [
+    {"name": "S1", "model": "2960-24TT", "x": 100, "y": 100},
+    {"name": "S2", "model": "2960-24TT", "x": 300, "y": 100},
+    {"name": "S9", "model": "9999-NOPE", "x": 500, "y": 100},
+    {"name": "S1", "model": "2960-24TT", "x": 100, "y": 100}
+  ],
+  "links": [
+    {"a": "S1", "a_port": "GigabitEthernet0/1", "b": "S2", "b_port": "GigabitEthernet0/1", "cable": "straight"},
+    {"a": "S1", "a_port": "FastEthernet0/99", "b": "S2", "b_port": "FastEthernet0/1"}
+  ]
+}

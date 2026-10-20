@@ -147,3 +147,55 @@ pt_clipboard / pt_status_line`。
 - **菜单项枚举不到**：Qt 的 QMenu 是懒构建，PT 8 里未展开时 `count()` 返回 0。菜单能做到的事都有等价的脚本入口（面板显隐、模式切换、窗口几何、剪贴板、`writeToPT`）；只有必须"真点一下"的，才交给 computer-use 层。
 - **CLI 屏幕文本读不到**：`getCurrentHistory().history` 只有命令串，没有回显；所以读配置走 `serializeToXml`，读端口状态走 IPC 对象。
 - **PC 没有 IOS 控制台**，其 ping 只能靠 GUI 的 Command Prompt；机器判定用 `pt_verify_l2`。
+
+## 1.2：动手前先预检（把"红链路"挡在建图之前）
+
+```powershell
+python -m ptmcp precheck spec.json          # 只体检，不改画布
+python -m ptmcp precheck spec.json --fix    # 顺手把线缆/端口修好
+```
+
+检查项（每一条都来自我们实际踩过的坑）：
+
+| code | 含义 | 后果 |
+|---|---|---|
+| `bad-model` | 型号不在 PT 目录里 | addDevice 直接失败 |
+| `dup-name` | 设备重名 | PT 静默改名，后续按名字全查不到 |
+| `overlap` | 两台设备同一个坐标 | 图标叠在一起 |
+| `no-device` | 画布上没这台（live 模式） | 连线失败 |
+| `no-port` | 端口名不存在 | `createLink` 返回 false，链路凭空消失 |
+| `port-busy` | 端口已被占用 | 同上 |
+| `bad-cable` | 交换机↔交换机用了直通线 | **两端永远 down，图上是红线** |
+
+`--fix` 会做两件确定性修复：按设备类型重算线缆，并把冲突/不存在的端口换到同设备下一个空闲端口（修复时会预留端口，避免两条链路又撞到一起）。
+
+实测：
+
+```
+before = 8 issues
+after  --fix → 剩余 2 issues（bad-model / dup-name / overlap 属于人必须决策的）
+links after fix: S1:FastEthernet0/5 <-> S2:FastEthernet0/5  cable=cross
+                 S1:FastEthernet0/6 <-> S2:FastEthernet0/6  cable=cross
+```
+
+`pt.build()` 现在会自动先跑 precheck（新建画布时跳过 live 检查，否则会误报），报告里带 `precheck.ok`。
+
+## 1.3：路由配置读回（配置级）
+
+```powershell
+python -m ptmcp routing R1
+```
+```json
+{"protocols":[{"proto":"ospf 1","lines":["log-adjacency-changes",
+  "network 10.1.0.0 0.0.255.255 area 0","network 10.0.0.0 0.0.0.3 area 0"]}],
+ "static_routes":[], "interfaces":["10.1.2.1 255.255.255.0", "..."]}
+```
+
+### 这里有一条硬边界（本轮实测确认）
+
+把路由器 XML 全量 dump 出来查过：里面只有 `ENABLED_ROUTER`，**没有路由表、没有 OSPF 邻居、没有 trunk allowed-vlan、没有 STP 状态**。
+这些是 IOS 进程里的动态状态，PT 只把它们送到 CLI 屏幕，而屏幕文本读不到。所以：
+
+- **能读**：running-config、VLAN 库、VTP 状态、端口 up/proto/mode/vlan/native、MAC、路由**配置**
+- **读不到**：`show ip route` 的学到的路由、`show ip ospf neighbor`、`show interfaces trunk` 的 allowed 列表、STP 端口角色
+- 需要这些时：`pt_cli` 把命令打进设备，人/computer-use 看屏幕；机器判定仍用 `pt_verify_l2` + `pt_ping`

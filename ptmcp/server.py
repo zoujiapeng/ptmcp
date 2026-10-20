@@ -206,3 +206,26 @@ def pt_status_line(text: str) -> str:
     """Write a line into PT's own console/status area."""
     _need_engine()
     return ui.status_line(text)
+
+@mcp.tool()
+def pt_precheck(spec_json: str, fix: bool = False) -> str:
+    """Validate a topology spec before building it (ports, cables, duplicates).
+
+    Catches the three failure modes that used to turn links red or make them
+    disappear: a port that does not exist, a port already in use, and a
+    switch<->switch link on a straight-through cable. fix=true repairs cables and
+    moves links to the next free port, returning a patched spec.
+    """
+    from .precheck import precheck
+    return json.dumps(precheck(json.loads(spec_json), fix=fix), ensure_ascii=False, indent=2)
+
+
+@mcp.tool()
+def pt_routing(device: str) -> str:
+    """Routing configuration of a device (protocols, networks, static routes).
+
+    Config-level only: PT's engine XML has no live routing table or OSPF
+    neighbour state, so use pt_ping / pt_verify_l2 for reachability.
+    """
+    _need_engine()
+    return json.dumps(state.routing(device), ensure_ascii=False, indent=2)

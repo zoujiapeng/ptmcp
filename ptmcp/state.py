@@ -123,3 +123,31 @@ def show(name: str, what: str = "run") -> object:
     if what in ("int", "interface", "interfaces", "ports"):
         return interfaces(name)
     raise ValueError("what must be one of: run, vlan, vtp, mac, interfaces")
+
+def routing(name: str) -> dict:
+    """Routing *configuration* (what is configured, not what is learned).
+
+    PT's engine XML carries the running-config but not the live routing table or
+    OSPF neighbour state, so this reports the configured blocks and static routes
+    - use `pt_ping`/`pt_verify_l2` for reachability, and a real CLI window for
+    `show ip route` / `show ip ospf neighbor`.
+    """
+    cfg = running_config(name)
+    out = {"protocols": [], "static_routes": [], "interfaces": []}
+    current = None
+    for raw in cfg.splitlines():
+        line = raw.strip()
+        low = line.lower()
+        if low.startswith("router "):
+            current = {"proto": line[7:].strip(), "lines": []}
+            out["protocols"].append(current)
+        elif low.startswith("ip route "):
+            out["static_routes"].append(line[9:].strip())
+        elif low.startswith("ip address "):
+            out["interfaces"].append(line[11:].strip())
+        elif current is not None:
+            if line in ("!", "") or low.startswith("interface ") or low.startswith("line "):
+                current = None
+            else:
+                current["lines"].append(line)
+    return out

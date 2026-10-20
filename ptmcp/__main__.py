@@ -3,8 +3,10 @@
 
     python -m ptmcp bootstrap
     python -m ptmcp status | new | ui | view
+    python -m ptmcp precheck spec.json [--fix]
     python -m ptmcp build spec.json [--save out.pkt]
     python -m ptmcp show S1 run|vlan|vtp|mac|interfaces
+    python -m ptmcp routing R1
     python -m ptmcp cli S1 "vlan 2" "exit"
     python -m ptmcp batch ops.json
     python -m ptmcp ping S1 192.168.2.1
@@ -34,6 +36,10 @@ def main(argv: list[str] | None = None) -> int:
     for name in ("bootstrap", "status", "new", "serve", "view", "ui"):
         sub.add_parser(name)
 
+    pc = sub.add_parser("precheck")
+    pc.add_argument("spec")
+    pc.add_argument("--fix", action="store_true")
+
     b = sub.add_parser("build")
     b.add_argument("spec")
     b.add_argument("--save")
@@ -42,6 +48,9 @@ def main(argv: list[str] | None = None) -> int:
     s = sub.add_parser("show")
     s.add_argument("device")
     s.add_argument("what", nargs="?", default="run")
+
+    rt = sub.add_parser("routing")
+    rt.add_argument("device")
 
     c = sub.add_parser("cli")
     c.add_argument("device")
@@ -100,6 +109,12 @@ def main(argv: list[str] | None = None) -> int:
         _print("PT script engine is not polling. Run `python -m ptmcp bootstrap`.")
         return 1
 
+    if args.cmd == "precheck":
+        from .precheck import precheck
+        sp = json.loads(Path(args.spec).read_text(encoding="utf-8"))
+        _print(precheck(sp, fix=args.fix))
+        return 0
+
     if args.cmd == "build":
         spec = json.loads(Path(args.spec).read_text(encoding="utf-8"))
         _print(pt.build(spec, new=not args.no_new, save_to=args.save or spec.get("save")))
@@ -111,6 +126,7 @@ def main(argv: list[str] | None = None) -> int:
         "ui": lambda: ui.controls(),
         "view": lambda: ui.view_state(),
         "show": lambda: state.show(args.device, args.what),
+        "routing": lambda: state.routing(args.device),
         "cli": lambda: pt.cli(args.device, args.commands),
         "batch": lambda: ops.batch(json.loads(Path(args.ops).read_text(encoding="utf-8"))),
         "ping": lambda: pt.ping(args.source, args.target, args.count),
