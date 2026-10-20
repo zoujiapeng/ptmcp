@@ -1,0 +1,5 @@
+[
+ {"op":"cli","device":"S1","commands":["enable","configure terminal","vlan 30","name VOICE","exit","interface f0/3","switchport mode access","switchport access vlan 30","exit"]},
+ {"op":"port","device":"S1","port":"GigabitEthernet0/2","mode":1,"access_vlan":30},
+ {"op":"rename","device":"S3","to":"S3-DIST"}
+]

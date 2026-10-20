@@ -13,7 +13,7 @@ import json
 
 from mcp.server.fastmcp import FastMCP
 
-from . import bridge, pt
+from . import bridge, ops, pt, state, ui
 
 mcp = FastMCP(
     "packet-tracer",
@@ -104,3 +104,105 @@ def pt_run_js(code: str) -> str:
     """Escape hatch: run JS in PT's script engine; end with `throw new Error(text)`."""
     _need_engine()
     return bridge.ask(code, timeout=30)
+
+# ---------------------------------------------------------------- read back
+
+
+@mcp.tool()
+def pt_show(device: str, what: str = "run") -> str:
+    """Read device state like the CLI does: run | vlan | vtp | mac | interfaces.
+
+    This is real read-back, not screen scraping: PT serialises each device to
+    XML and we parse the running-config lines, the VLAN database, VTP status
+    and per-port state out of it.
+    """
+    _need_engine()
+    return json.dumps(state.show(device, what), ensure_ascii=False, indent=2)
+
+
+@mcp.tool()
+def pt_batch(ops_json: str) -> str:
+    """Run many operations in ONE round-trip (fast path for complex scripts).
+
+    [{"op":"cli","device":"S1","commands":["vlan 2","exit"]},
+     {"op":"ip","device":"PC1","port":"FastEthernet0","ip":"10.0.0.1","mask":"255.255.255.0"},
+     {"op":"port","device":"S1","port":"FastEthernet0/1","mode":1,"access_vlan":20},
+     {"op":"power","device":"R1","on":true},
+     {"op":"rename","device":"S1","to":"CORE"},
+     {"op":"module","device":"R1","slot":0,"model":"HWIC-2T"}]
+    """
+    _need_engine()
+    return json.dumps(ops.batch(json.loads(ops_json)), ensure_ascii=False, indent=2)
+
+
+@mcp.tool()
+def pt_power(device: str, on: bool = True) -> str:
+    """Power a device on or off (the physical switch)."""
+    _need_engine()
+    return ops.power(device, on)
+
+
+@mcp.tool()
+def pt_rename(device: str, new_name: str) -> str:
+    """Rename a device (display name + IOS hostname)."""
+    _need_engine()
+    return ops.rename(device, new_name)
+
+
+@mcp.tool()
+def pt_add_module(device: str, slot: int, model: str) -> str:
+    """Insert a hardware module, e.g. HWIC-2T / NM-ESW-161 into a slot."""
+    _need_engine()
+    return ops.add_module(device, slot, model)
+
+
+# ------------------------------------------------------------------- the UI
+
+
+@mcp.tool()
+def pt_ui_controls() -> str:
+    """List everything the UI layer can drive (modes, panels, window, state)."""
+    _need_engine()
+    return json.dumps(ui.controls(), ensure_ascii=False, indent=2)
+
+
+@mcp.tool()
+def pt_view_state() -> str:
+    """Workspace/UI state: logical vs physical, realtime vs simulation, geometry."""
+    _need_engine()
+    return json.dumps(ui.view_state(), ensure_ascii=False)
+
+
+@mcp.tool()
+def pt_switch_mode(mode: str) -> str:
+    """Switch mode: logical | physical | realtime | simulation."""
+    _need_engine()
+    return ui.switch_mode(mode)
+
+
+@mcp.tool()
+def pt_panels(left: bool = True, bottom: bool = True) -> str:
+    """Show/hide the device box (left pane) and the PDU/event list (bottom pane)."""
+    _need_engine()
+    return json.dumps(ui.panels(left, bottom), ensure_ascii=False)
+
+
+@mcp.tool()
+def pt_window(action: str = "maximize", width: int = 0, height: int = 0) -> str:
+    """Window geometry: maximize | normal | geometry."""
+    _need_engine()
+    return json.dumps(ui.window(action, width, height), ensure_ascii=False)
+
+
+@mcp.tool()
+def pt_clipboard(text: str = "") -> str:
+    """Read PT's clipboard, or write `text` into it when given."""
+    _need_engine()
+    return ui.clipboard(text or None)
+
+
+@mcp.tool()
+def pt_status_line(text: str) -> str:
+    """Write a line into PT's own console/status area."""
+    _need_engine()
+    return ui.status_line(text)

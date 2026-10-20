@@ -98,3 +98,52 @@ PT 8 没有"静默注册脚本模块"的接口，模块只能通过界面登记�
 - [PTBuilder](https://github.com/kimmknight/PTBuilder)（Kim Knight）——PT 脚本引擎 API 的开山实践
 
 MIT License.
+
+## 1.1：像 CLI 一样用它
+
+新增的读回层让 agent 不再"盲配"——PT 会把每台设备序列化成 XML，我们从中还原出 CLI 的输出：
+
+```powershell
+python -m ptmcp show S1 run         # show running-config（真配置行）
+python -m ptmcp show S1 vlan        # show vlan（VLAN 库：id/name）
+python -m ptmcp show S1 vtp         # show vtp status（mode/domain/revision）
+python -m ptmcp show S1 interfaces  # 每端口 up/protocol/mode/vlan/native/duplex
+python -m ptmcp show S1 mac         # MAC 列表
+```
+
+批量执行（一次往返，复杂脚本也不费时）：
+
+```powershell
+python -m ptmcp batch ops.json
+```
+```json
+[{"op":"cli","device":"S1","commands":["vlan 30","name VOICE","exit"]},
+ {"op":"port","device":"S1","port":"GigabitEthernet0/2","mode":1,"access_vlan":30},
+ {"op":"ip","device":"PC1","port":"FastEthernet0","ip":"10.0.0.1","mask":"255.255.255.0"},
+ {"op":"power","device":"R1","on":true},
+ {"op":"rename","device":"S1","to":"CORE"},
+ {"op":"module","device":"R1","slot":0,"model":"HWIC-2T"}]
+```
+
+设备与 UI 操作：
+
+```powershell
+python -m ptmcp power R1 off | on       # 物理电源
+python -m ptmcp module R1 0 HWIC-2T     # 插模块（自动断电/上电 + skipBoot）
+python -m ptmcp rename S1 CORE
+python -m ptmcp mode simulation         # logical/physical/realtime/simulation
+python -m ptmcp panels --left 0 --bottom 1
+python -m ptmcp window maximize
+python -m ptmcp clip                    # 读写 PT 剪贴板
+python -m ptmcp ui                      # 一次看全 UI 可控项 + 当前状态
+```
+
+MCP 工具同步新增：`pt_show / pt_batch / pt_power / pt_rename / pt_add_module /
+pt_ui_controls / pt_view_state / pt_switch_mode / pt_panels / pt_window /
+pt_clipboard / pt_status_line`。
+
+### 边界（实测，不猜）
+
+- **菜单项枚举不到**：Qt 的 QMenu 是懒构建，PT 8 里未展开时 `count()` 返回 0。菜单能做到的事都有等价的脚本入口（面板显隐、模式切换、窗口几何、剪贴板、`writeToPT`）；只有必须"真点一下"的，才交给 computer-use 层。
+- **CLI 屏幕文本读不到**：`getCurrentHistory().history` 只有命令串，没有回显；所以读配置走 `serializeToXml`，读端口状态走 IPC 对象。
+- **PC 没有 IOS 控制台**，其 ping 只能靠 GUI 的 Command Prompt；机器判定用 `pt_verify_l2`。
