@@ -1,37 +1,220 @@
 {
   "_case": "案例28 Trunk：2×2950T-24 + 4 PC，S1/S2 f0/13 干道，native vlan 2；同 VLAN 可通、跨 VLAN 不通",
   "devices": [
-    {"name": "S1",  "model": "2950T-24", "x": 260, "y": 140},
-    {"name": "S2",  "model": "2950T-24", "x": 620, "y": 140},
-    {"name": "PC0", "model": "PC-PT",    "x": 150, "y": 400},
-    {"name": "PC1", "model": "PC-PT",    "x": 330, "y": 400},
-    {"name": "PC2", "model": "PC-PT",    "x": 540, "y": 400},
-    {"name": "PC3", "model": "PC-PT",    "x": 720, "y": 400}
+    {
+      "name": "S1",
+      "model": "2950T-24",
+      "x": 260,
+      "y": 140
+    },
+    {
+      "name": "S2",
+      "model": "2950T-24",
+      "x": 620,
+      "y": 140
+    },
+    {
+      "name": "PC0",
+      "model": "PC-PT",
+      "x": 150,
+      "y": 400
+    },
+    {
+      "name": "PC1",
+      "model": "PC-PT",
+      "x": 330,
+      "y": 400
+    },
+    {
+      "name": "PC2",
+      "model": "PC-PT",
+      "x": 540,
+      "y": 400
+    },
+    {
+      "name": "PC3",
+      "model": "PC-PT",
+      "x": 720,
+      "y": 400
+    }
   ],
   "links": [
-    {"a": "S1", "a_port": "FastEthernet0/1",  "b": "PC0", "b_port": "FastEthernet0"},
-    {"a": "S1", "a_port": "FastEthernet0/2",  "b": "PC1", "b_port": "FastEthernet0"},
-    {"a": "S2", "a_port": "FastEthernet0/3",  "b": "PC2", "b_port": "FastEthernet0"},
-    {"a": "S2", "a_port": "FastEthernet0/4",  "b": "PC3", "b_port": "FastEthernet0"},
-    {"a": "S1", "a_port": "FastEthernet0/13", "b": "S2",  "b_port": "FastEthernet0/13"}
+    {
+      "a": "S1",
+      "a_port": "FastEthernet0/1",
+      "b": "PC0",
+      "b_port": "FastEthernet0"
+    },
+    {
+      "a": "S1",
+      "a_port": "FastEthernet0/2",
+      "b": "PC1",
+      "b_port": "FastEthernet0"
+    },
+    {
+      "a": "S2",
+      "a_port": "FastEthernet0/3",
+      "b": "PC2",
+      "b_port": "FastEthernet0"
+    },
+    {
+      "a": "S2",
+      "a_port": "FastEthernet0/4",
+      "b": "PC3",
+      "b_port": "FastEthernet0"
+    },
+    {
+      "a": "S1",
+      "a_port": "FastEthernet0/13",
+      "b": "S2",
+      "b_port": "FastEthernet0/13"
+    }
   ],
   "ips": [
-    {"device": "PC0", "port": "FastEthernet0", "ip": "192.168.2.1", "mask": "255.255.255.0"},
-    {"device": "PC2", "port": "FastEthernet0", "ip": "192.168.2.2", "mask": "255.255.255.0"},
-    {"device": "PC1", "port": "FastEthernet0", "ip": "192.168.3.1", "mask": "255.255.255.0"},
-    {"device": "PC3", "port": "FastEthernet0", "ip": "192.168.3.2", "mask": "255.255.255.0"}
+    {
+      "device": "PC0",
+      "port": "FastEthernet0",
+      "ip": "192.168.2.1",
+      "mask": "255.255.255.0"
+    },
+    {
+      "device": "PC2",
+      "port": "FastEthernet0",
+      "ip": "192.168.2.2",
+      "mask": "255.255.255.0"
+    },
+    {
+      "device": "PC1",
+      "port": "FastEthernet0",
+      "ip": "192.168.3.1",
+      "mask": "255.255.255.0"
+    },
+    {
+      "device": "PC3",
+      "port": "FastEthernet0",
+      "ip": "192.168.3.2",
+      "mask": "255.255.255.0"
+    }
   ],
   "cli": {
-    "S1": ["enable", "configure terminal", "hostname S1",
-           "vlan 2", "name VLAN2", "exit", "vlan 3", "name VLAN3", "exit",
-           "interface f0/1", "switchport mode access", "switchport access vlan 2", "exit",
-           "interface f0/2", "switchport mode access", "switchport access vlan 3", "exit",
-           "interface f0/13", "switchport mode trunk", "exit"],
-    "S2": ["enable", "configure terminal", "hostname S2",
-           "vlan 2", "name VLAN2", "exit", "vlan 3", "name VLAN3", "exit",
-           "interface f0/3", "switchport mode access", "switchport access vlan 2", "exit",
-           "interface f0/4", "switchport mode access", "switchport access vlan 3", "exit",
-           "interface f0/13", "switchport mode trunk", "switchport trunk native vlan 2", "exit"]
+    "S1": [
+      "enable",
+      "configure terminal",
+      "hostname S1",
+      "vlan 2",
+      "name VLAN2",
+      "exit",
+      "vlan 3",
+      "name VLAN3",
+      "exit",
+      "interface f0/1",
+      "switchport mode access",
+      "switchport access vlan 2",
+      "exit",
+      "interface f0/2",
+      "switchport mode access",
+      "switchport access vlan 3",
+      "exit",
+      "interface f0/13",
+      "switchport mode trunk",
+      "switchport trunk native vlan 2",
+      "exit"
+    ],
+    "S2": [
+      "enable",
+      "configure terminal",
+      "hostname S2",
+      "vlan 2",
+      "name VLAN2",
+      "exit",
+      "vlan 3",
+      "name VLAN3",
+      "exit",
+      "interface f0/3",
+      "switchport mode access",
+      "switchport access vlan 2",
+      "exit",
+      "interface f0/4",
+      "switchport mode access",
+      "switchport access vlan 3",
+      "exit",
+      "interface f0/13",
+      "switchport mode trunk",
+      "switchport trunk native vlan 2",
+      "exit"
+    ]
   },
-  "save": "C:\\pt\\case28_auto.pkt"
+  "save": "C:\\pt\\case28_auto.pkt",
+  "asserts": [
+    {
+      "access": {
+        "device": "S1",
+        "port": "FastEthernet0/1",
+        "vlan": 2
+      }
+    },
+    {
+      "access": {
+        "device": "S1",
+        "port": "FastEthernet0/2",
+        "vlan": 3
+      }
+    },
+    {
+      "access": {
+        "device": "S2",
+        "port": "FastEthernet0/3",
+        "vlan": 2
+      }
+    },
+    {
+      "access": {
+        "device": "S2",
+        "port": "FastEthernet0/4",
+        "vlan": 3
+      }
+    },
+    {
+      "trunk": {
+        "device": "S1",
+        "port": "FastEthernet0/13",
+        "native": 2
+      }
+    },
+    {
+      "trunk": {
+        "device": "S2",
+        "port": "FastEthernet0/13",
+        "native": 2
+      }
+    },
+    {
+      "same_vlan": [
+        "PC0",
+        "PC2"
+      ]
+    },
+    {
+      "diff_vlan": [
+        "PC0",
+        "PC1"
+      ]
+    },
+    {
+      "diff_vlan": [
+        "PC0",
+        "PC3"
+      ]
+    },
+    {
+      "vlan_exists": {
+        "device": "S1",
+        "vlan": 3,
+        "name": "VLAN3"
+      }
+    },
+    {
+      "trunk_consistency": "S1:FastEthernet0/13-S2:FastEthernet0/13"
+    }
+  ]
 }

@@ -49,6 +49,9 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("device")
     s.add_argument("what", nargs="?", default="run")
 
+    asrt = sub.add_parser("asserts")
+    asrt.add_argument("spec")
+
     rt = sub.add_parser("routing")
     rt.add_argument("device")
 
@@ -113,6 +116,12 @@ def main(argv: list[str] | None = None) -> int:
         from .precheck import precheck
         sp = json.loads(Path(args.spec).read_text(encoding="utf-8"))
         _print(precheck(sp, fix=args.fix))
+        return 0
+
+    if args.cmd == "asserts":
+        from .asserts import check
+        sp = json.loads(Path(args.spec).read_text(encoding="utf-8"))
+        _print(check(sp))
         return 0
 
     if args.cmd == "build":

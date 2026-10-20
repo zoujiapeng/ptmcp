@@ -229,3 +229,15 @@ def pt_routing(device: str) -> str:
     """
     _need_engine()
     return json.dumps(state.routing(device), ensure_ascii=False, indent=2)
+
+
+@mcp.tool()
+def pt_asserts(spec_json: str) -> str:
+    """Check the lab against declared assertions (same_vlan / diff_vlan / trunk / ...).
+
+    Rules live in the spec under "asserts"; every failure comes with a concrete
+    fix, so an agent can repair instead of guessing. This is the difference
+    between "links look green" and "the lab is actually correct".
+    """
+    from .asserts import check
+    return json.dumps(check(json.loads(spec_json)), ensure_ascii=False, indent=2)

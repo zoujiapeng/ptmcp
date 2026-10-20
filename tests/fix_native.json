@@ -1,0 +1,2 @@
+[{"op":"port","device":"S1","port":"FastEthernet0/13","mode":2,"native_vlan":2},
+ {"op":"cli","device":"S1","commands":["enable","configure terminal","interface f0/13","switchport trunk native vlan 2","exit"]}]

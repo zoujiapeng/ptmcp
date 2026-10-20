@@ -187,6 +187,12 @@ def build(spec: dict, new: bool = True, save_to: str | None = None) -> dict:
         report["failed_links"] = failed
     if spec.get("links") and spec.get("wait", True):
         report["link_check"] = wait_links_up(spec)
+    if spec.get("asserts"):
+        from .asserts import check as _check
+        try:
+            report["asserts"] = _check(spec)
+        except Exception as exc:                               # noqa: BLE001
+            report["asserts"] = {"ok": None, "error": str(exc)}
     if save_to:
         report["save"] = save(save_to)
     return report
