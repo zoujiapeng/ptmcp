@@ -175,7 +175,11 @@ def build(spec: dict, new: bool = True, save_to: str | None = None) -> dict:
     lines.append('throw new Error(log.join(" | "));')
 
     report = {"build": ask("\n".join(lines), timeout=float(spec.get("timeout", 90)))}
-    if spec.get("links"):
+    failed = [seg.split(" -> ")[0].strip().strip("link ")
+              for seg in report["build"].split("|") if seg.strip().endswith("-> false")]
+    if failed:
+        report["failed_links"] = failed
+    if spec.get("links") and spec.get("wait", True):
         report["link_check"] = wait_links_up(spec)
     if save_to:
         report["save"] = save(save_to)
