@@ -1,0 +1,27 @@
+{
+  "_comment": "Second lab built by ptctl.py next to lab1: two LANs, routed R-R cross link.",
+  "timeout": 60,
+  "devices": [
+    {"name": "R10",  "model": "2911",      "x": 860, "y": 140},
+    {"name": "R20",  "model": "2911",      "x": 1160, "y": 140},
+    {"name": "SW10", "model": "2960-24TT", "x": 860, "y": 300},
+    {"name": "SW20", "model": "2960-24TT", "x": 1160, "y": 300},
+    {"name": "PC10", "model": "PC-PT",     "x": 790, "y": 450},
+    {"name": "PC20", "model": "PC-PT",     "x": 1240, "y": 450}
+  ],
+  "links": [
+    {"a": "R10",  "a_port": "GigabitEthernet0/0", "b": "SW10", "b_port": "GigabitEthernet0/1", "cable": "straight"},
+    {"a": "R20",  "a_port": "GigabitEthernet0/0", "b": "SW20", "b_port": "GigabitEthernet0/1", "cable": "straight"},
+    {"a": "R10",  "a_port": "GigabitEthernet0/1", "b": "R20",  "b_port": "GigabitEthernet0/1", "cable": "cross"},
+    {"a": "SW10", "a_port": "FastEthernet0/1",    "b": "PC10", "b_port": "FastEthernet0",      "cable": "straight"},
+    {"a": "SW20", "a_port": "FastEthernet0/1",    "b": "PC20", "b_port": "FastEthernet0",      "cable": "straight"}
+  ],
+  "ips": [
+    {"device": "R10",  "port": "GigabitEthernet0/0", "ip": "192.168.10.1", "mask": "255.255.255.0"},
+    {"device": "R10",  "port": "GigabitEthernet0/1", "ip": "10.10.0.1",    "mask": "255.255.255.252"},
+    {"device": "R20",  "port": "GigabitEthernet0/0", "ip": "192.168.20.1", "mask": "255.255.255.0"},
+    {"device": "R20",  "port": "GigabitEthernet0/1", "ip": "10.10.0.2",    "mask": "255.255.255.252"},
+    {"device": "PC10", "port": "FastEthernet0", "ip": "192.168.10.10", "mask": "255.255.255.0", "gateway": "192.168.10.1"},
+    {"device": "PC20", "port": "FastEthernet0", "ip": "192.168.20.10", "mask": "255.255.255.0", "gateway": "192.168.20.1"}
+  ]
+}

@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.venv/
+
+# local artifacts, not source
+shots/
+docs/
+ref/
+ext/
+*.pkt
+!assets/*.pts
+*.log

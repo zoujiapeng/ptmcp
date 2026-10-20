@@ -1,0 +1,23 @@
+{
+  "_case": "案例27 划分VLAN：1×2950T-24 + 2 PC；f0/1→VLAN2，f0/2→VLAN3；划分后 PC0 ping PC1 不通",
+  "devices": [
+    {"name": "S1",  "model": "2950T-24", "x": 300, "y": 150},
+    {"name": "PC0", "model": "PC-PT",    "x": 190, "y": 380},
+    {"name": "PC1", "model": "PC-PT",    "x": 430, "y": 380}
+  ],
+  "links": [
+    {"a": "S1", "a_port": "FastEthernet0/1", "b": "PC0", "b_port": "FastEthernet0"},
+    {"a": "S1", "a_port": "FastEthernet0/2", "b": "PC1", "b_port": "FastEthernet0"}
+  ],
+  "ips": [
+    {"device": "PC0", "port": "FastEthernet0", "ip": "192.168.12.1", "mask": "255.255.255.0"},
+    {"device": "PC1", "port": "FastEthernet0", "ip": "192.168.12.2", "mask": "255.255.255.0"}
+  ],
+  "cli": {
+    "S1": ["enable", "configure terminal", "hostname S1",
+           "vlan 2", "name VLAN2", "exit", "vlan 3", "name VLAN3", "exit",
+           "interface f0/1", "switchport mode access", "switchport access vlan 2", "exit",
+           "interface f0/2", "switchport mode access", "switchport access vlan 3", "exit"]
+  },
+  "save": "C:\\pt\\case27_auto.pkt"
+}

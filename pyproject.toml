@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ptmcp"
+version = "1.0.0"
+description = "Dialog-free, agent-friendly MCP server that drives Cisco Packet Tracer 8.x in the background"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "zoujiapeng" }]
+dependencies = ["mcp>=1.13"]
+
+[project.scripts]
+ptmcp = "ptmcp.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/zoujiapeng/ptmcp"
+
+[tool.setuptools]
+packages = ["ptmcp"]
