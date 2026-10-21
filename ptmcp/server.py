@@ -241,3 +241,24 @@ def pt_asserts(spec_json: str) -> str:
     """
     from .asserts import check
     return json.dumps(check(json.loads(spec_json)), ensure_ascii=False, indent=2)
+
+
+@mcp.tool()
+def pt_fix_plan(spec_json: str) -> str:
+    """Show which assertion failures are auto-repairable and the ops that would fix them."""
+    from .fix import plan
+    return json.dumps(plan(json.loads(spec_json)), ensure_ascii=False, indent=2)
+
+
+@mcp.tool()
+def pt_fix_loop(spec_json: str, rounds: int = 3) -> str:
+    """Assert -> repair -> re-assert, unattended, up to `rounds` times.
+
+    Repairs access VLANs, trunk mode/native, trunk consistency, missing VLANs,
+    VTP mode/domain and administratively-down interfaces. Anything that needs a
+    design decision (or a re-cable) is returned under "manual" instead of being
+    silently "fixed".
+    """
+    from .fix import fix_loop
+    return json.dumps(fix_loop(json.loads(spec_json), rounds=rounds),
+                      ensure_ascii=False, indent=2)

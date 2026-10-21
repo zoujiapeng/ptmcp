@@ -52,6 +52,11 @@ def main(argv: list[str] | None = None) -> int:
     asrt = sub.add_parser("asserts")
     asrt.add_argument("spec")
 
+    fl = sub.add_parser("fixloop")
+    fl.add_argument("spec")
+    fl.add_argument("--rounds", type=int, default=3)
+    fl.add_argument("--plan", action="store_true")
+
     rt = sub.add_parser("routing")
     rt.add_argument("device")
 
@@ -116,6 +121,12 @@ def main(argv: list[str] | None = None) -> int:
         from .precheck import precheck
         sp = json.loads(Path(args.spec).read_text(encoding="utf-8"))
         _print(precheck(sp, fix=args.fix))
+        return 0
+
+    if args.cmd == "fixloop":
+        from .fix import fix_loop, plan
+        sp = json.loads(Path(args.spec).read_text(encoding="utf-8"))
+        _print(plan(sp) if args.plan else fix_loop(sp, rounds=args.rounds))
         return 0
 
     if args.cmd == "asserts":

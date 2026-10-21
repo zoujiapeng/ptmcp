@@ -1,0 +1,1 @@
+[{"op":"port","device":"S1","port":"FastEthernet0/13","mode":2,"native_vlan":1},{"op":"port","device":"S1","port":"FastEthernet0/2","mode":1,"access_vlan":1}]

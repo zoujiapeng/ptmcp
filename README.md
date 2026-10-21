@@ -199,3 +199,31 @@ python -m ptmcp routing R1
 - **能读**：running-config、VLAN 库、VTP 状态、端口 up/proto/mode/vlan/native、MAC、路由**配置**
 - **读不到**：`show ip route` 的学到的路由、`show ip ospf neighbor`、`show interfaces trunk` 的 allowed 列表、STP 端口角色
 - 需要这些时：`pt_cli` 把命令打进设备，人/computer-use 看屏幕；机器判定仍用 `pt_verify_l2` + `pt_ping`
+
+## 1.4：自动修复闭环（assert → repair → re-assert）
+
+```powershell
+python -m ptmcp fixloop spec.json --plan   # 先看会改什么，不动手
+python -m ptmcp fixloop spec.json          # 直接闭环修复（默认 3 轮）
+```
+
+它读 spec 里的 `asserts`，和实时设备状态比对，把**能确定修复**的偏差翻译成 `pt_batch` 的 ops，一次往返执行，然后重新断言；直到通过 / 没有可自动修的 / 轮数用完。
+
+**能自动修**：access vlan、trunk 模式与 native、两端 trunk 一致性、缺失 VLAN、VTP mode/domain、管理性 down 的接口（`no shutdown`）。
+**不自动修（列为 manual）**：`same_vlan`/`diff_vlan` 与布线矛盾（这是设计问题）、线缆类型错（要重建）、缺硬件。
+
+实测（故意把 S1 改坏：native 1、f0/2 落回 VLAN1）：
+
+```
+改动前 asserts：failed = 3
+  - S1:FastEthernet0/2 vlan=1 mode=1, expected access 3
+  - S1:FastEthernet0/13 trunk native=1 (need 2)
+  - trunk mismatch S1:FastEthernet0/13-S2:FastEthernet0/13: native 1 vs 2
+
+fixloop：
+  round 1  7 ops（S1/S2 的 port 属性 + IOS CLI）
+  round 2  already correct
+  ok=True  applied=1  final: 11 passed / 0 failed
+```
+
+一轮就能收敛，因为修复同时改**运行态属性**（立即生效，链路判定用）和**下发 CLI**（重启后仍然成立）。
