@@ -401,3 +401,31 @@ PC11 -> PC41 : ok=false  ❌ R2:dropped   （跨路由器，OSPF 路径）
 `getPrompt()` 都变空，`enterCommand` 变成静默 no-op，配置全部不生效。
 已回滚成 PTBuilder 的 `enterCommand("!", "global")`，配置立刻恢复（`hostname applied: True`，
 prompt 变回 `S1(config)#`）。教训：**没初始化前不要碰终端对象**。
+
+## 1.10：陌生电脑装什么、能不能"一句话搞定"
+
+结论：**装完之后可以一句话建图并全绿，但全新机器上有 4 个前置**，其中 3 个可自动、1 个只能点一次。
+
+`install.ps1` 把能自动的都做了（本机实测通过）：
+
+```
+== 1/5 Packet Tracer ==   found C:\Program Files\Cisco Packet Tracer 8.0  version 8.0.0.0212
+== 2/5 Python package ==   package installed
+== 3/5 PT script module == copied to ...\extensions\MCPBuilder
+== 4/5 start Packet Tracer ==  already running and polling
+== 5/5 smoke test ==       allUp: true
+```
+
+前置条件：
+
+| # | 条件 | 谁来做 |
+|---|---|---|
+| 1 | 已装 Packet Tracer（**仅 8.x 验证过**，PT 9 的脚本 API 不同） | 人工 |
+| 2 | Python 3.10+、能访问 PyPI | `install.ps1` 自动 |
+| 3 | 能写 `C:\Program Files\...\extensions\` | **必须管理员 PowerShell**，脚本会检测并提示 |
+| 4 | PT 首次启动的 NetAcad 登录，点一次 "Continue as a Guest" | **只能人工**（之后 PT 记住，不再问） |
+| 5 | Windows（PrintWindow/tasklist/路径都是 Win32） | — |
+| 6 | 可选：`pip install packet-tracer-mcp`（借用它的 ACL/NAT 生成器） | `install.ps1` 之外单独装 |
+
+已知功能缺口（会影响"跟本机一样"这句话）：跨 VLAN / 跨路由的 `pt_pdu_ping` 还没跑通
+（`R1:dropped` / `R2:dropped`），3560 的三层交换配置在 PT 8 上配不上；这两条见 `HANDOFF.md`。
