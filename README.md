@@ -284,3 +284,35 @@ python tests/headless.py         # 冷启动 → 建图 → 全绿 → 断言 �
 冷启动时 `vlan 10 / name USERS` 会**静默丢失**：交换机还在 boot，CLI 送进去被丢弃。
 现在 `build()` 分两阶段：先建设备/链路/IP，再 `wait_ready()` 轮询 `isBooting()` 直到设备就绪，
 最后才下发 CLI。代价是冷启动建图时间从 7s 变成 ~72s（等设备启动），热启动仍是 8s 级。
+
+## 1.7：同机横评（三个都装了）与一个硬结论
+
+按"把他们全部安装"实测，结论不是"都装上就完事"：
+
+| | ptmcp（本仓库） | cisco-pt-mcp 0.1.6 | packet-tracer-mcp 0.9.0 |
+|---|---|---|---|
+| 安装 | 复制 `.pts` + `pip install -e .` | 复制 `.pts` + `uvx`/pip | pip + 它自己的 `V5.2.pts` |
+| 工具数 | 26 | **18** | **61** |
+| 冷启动无人值守 | ✅ 4.3s 起来并自动轮询 | ❌ `getNetwork` 30s 超时：`Packet Tracer plugin did not connect within 30s`（要先手点 Extensions 菜单打开它的窗口） | ❌ PT 8.0 上 `addDevice` 报 `ReferenceError` |
+| PT 8.0 建图 | ✅ 15 设备/14 链路全绿 | 未验证 | ❌ |
+| 断言 / 自动修复 | ✅ 8 类 + fix loop | ❌ | ❌ |
+
+**两个 PT 侧扩展不能共存**（本项目实测）：把 `cisco-pt-mcp.pts` 放进
+`extensions\` 后，PT 启动时我们的模块**不再轮询**（`alive.txt` 停更、请求超时）；
+移除它的 `.pts` 后，我们的引擎 4 秒内恢复。所以在 PT 8.0 上只能二选一。
+
+### 从他们的开源代码里学到、并已并入本项目的接口
+
+`cisco-pt-mcp` 的扩展源码是公开的（MIT），里面给出了我们之前没找到的两个入口：
+
+```js
+ipc.simulation()                          // setSimulationMode / forward / resetSimulation
+                                          // getFrameInstanceCount / getFrameInstanceAt
+ipc.appWindow().getUserCreatedPDU().addSimplePdu(src, dst)   // 真·ICMP PDU
+ipc.commandLog()                          // getEntryCount / getEntryAt / entry.getCommand()
+```
+
+`ptmcp/pdu.py` 已实现 `ping(source, destination)`（建 PDU → 步进仿真 → 判定）
+和 `command_log(device)`。**状态：实验性**——PDU 能建、能步进、能读到逐帧状态，
+但"成功"判定还不稳（PT 的 PDU 列表会累积旧 PDU，`resetSimulation()` 不清空它们，
+导致帧序列混入上一次的流量）。这条要真正可用，还得先解决 PDU 清理。
