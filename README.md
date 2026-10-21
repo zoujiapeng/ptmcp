@@ -316,3 +316,51 @@ ipc.commandLog()                          // getEntryCount / getEntryAt / entry.
 和 `command_log(device)`。**状态：实验性**——PDU 能建、能步进、能读到逐帧状态，
 但"成功"判定还不稳（PT 的 PDU 列表会累积旧 PDU，`resetSimulation()` 不清空它们，
 导致帧序列混入上一次的流量）。这条要真正可用，还得先解决 PDU 清理。
+
+## 1.8：把"终端"接进来（并整合竞品的强项）
+
+### 终端操作（已实测）
+
+```powershell
+python -m ptmcp term S1                       # 提示符/模式/待输入行
+python -m ptmcp run  S1 "enable" "conf t" "hostname CORE1" "exit"
+python -m ptmcp type S1 "show vlan brief"     # 逐字符输入（等于人打字）
+```
+
+`run()` 会把**每条命令执行后的提示符**回传，这就是"命令真的在终端里跑了"的证据：
+
+```
+enable                    :: S1(config)#
+configure terminal        :: S1(config)#
+vlan 40                   :: CORE1(config-vlan)#
+interface FastEthernet0/3 :: CORE1(config-if)#
+switchport mode trunk     :: CORE1(config-if)#
+```
+
+同一台设备随后读回：`FastEthernet0/3 = access vlan 40`、`GigabitEthernet0/1 = trunk`。
+`pt_term_println(device, "文本")` 还能往终端**显示区**写一行，人打开 CLI 就能看到。
+
+**读不到的仍然是"屏幕回显"**：`TerminalLine` 只给 prompt/mode/pending input，
+它的 history 对象里不是文本。所以判定一律走设备状态（`show run`/VLAN/端口）或 PDU。
+
+### 整合竞品的强项（MIT，直接调用，不重写）
+
+`ptmcp/borrow.py` 调用 `packet-tracer-mcp` 的生成器，把它们多年调过的 IOS 配置生成逻辑
+接到我们自己的终端执行器上：
+
+```python
+from ptmcp.borrow import vlan_cli, subinterface_cli, acl_cli, nat_cli, hardening_cli, port_security_cli
+lines = vlan_cli([{"vlan_id": 40, "name": "CAMPUS"}],
+                 [{"switch": "S1", "port": "FastEthernet0/3", "vlan_id": 40}],
+                 [{"switch": "S1", "port": "GigabitEthernet0/1"}], "2960-24TT")
+# -> vlan 40 / name CAMPUS / exit / interface ... / switchport mode access / ...
+term.run("S1", ["enable", "configure terminal"] + lines)
+```
+
+没装 `packet-tracer-mcp` 时会明确报错并给出安装命令，ptmcp 其余功能不受影响。
+
+### PDU ping：仍未定论（不吹）
+
+`pt_pdu_ping(PC0, PC1)` 能建 PDU、能步进、能读到逐帧状态（`PC0:buffered/PC0:dropped`），
+但**正例也没通过**：把 PC1 也划到 VLAN 2 后仍然 `ok=false`。所以这条现在是"能下发、能观察、
+不能作准"，README 里标记实验性，判定仍以 `pt_asserts` + `pt_verify_l2` 为准。

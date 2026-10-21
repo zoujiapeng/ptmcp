@@ -21,7 +21,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import bridge, ops, pt, shot, state, ui
+from . import bridge, ops, pdu, pt, shot, state, term, ui
 
 
 def start_pt() -> str:
@@ -77,6 +77,21 @@ def main(argv: list[str] | None = None) -> int:
     fl.add_argument("spec")
     fl.add_argument("--rounds", type=int, default=3)
     fl.add_argument("--plan", action="store_true")
+
+    tm = sub.add_parser("term")
+    tm.add_argument("device")
+
+    rn2 = sub.add_parser("run")
+    rn2.add_argument("device")
+    rn2.add_argument("lines", nargs="+")
+
+    tp = sub.add_parser("type")
+    tp.add_argument("device")
+    tp.add_argument("text")
+
+    pp = sub.add_parser("pdu-ping")
+    pp.add_argument("source")
+    pp.add_argument("destination")
 
     rt = sub.add_parser("routing")
     rt.add_argument("device")
@@ -173,6 +188,10 @@ def main(argv: list[str] | None = None) -> int:
         "view": lambda: ui.view_state(),
         "show": lambda: state.show(args.device, args.what),
         "routing": lambda: state.routing(args.device),
+        "term": lambda: term.state(args.device),
+        "run": lambda: term.run(args.device, args.lines),
+        "type": lambda: term.type_(args.device, args.text),
+        "pdu-ping": lambda: pdu.ping(args.source, args.destination),
         "cli": lambda: pt.cli(args.device, args.commands),
         "batch": lambda: ops.batch(json.loads(Path(args.ops).read_text(encoding="utf-8"))),
         "ping": lambda: pt.ping(args.source, args.target, args.count),
