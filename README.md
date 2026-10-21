@@ -249,3 +249,38 @@ python -m ptmcp build specs\campus.json
 ### 已知小瑕疵
 
 `pt_save` 为规避覆盖弹窗会先写临时名再改名，因此 **PT 标题栏显示的是临时文件名**（`...tmp.pkt`），磁盘上的 `campus_v1.pkt` 是正确的；重开该文件标题即正常。
+
+## 1.6：完全不依赖 computer use（实测）
+
+之前的说法是"注册模块要手动点一次界面"。**这个前提被推翻了**：把 `V5.2.pts` 放进
+`<PT 安装目录>\extensions\MCPBuilder\` 之后，PT **启动时会自动加载并启动脚本模块**，
+不需要任何点击。
+
+因此整条链路现在可以零 GUI 自动化跑完：
+
+```powershell
+python -m ptmcp bootstrap        # 找 PT、校验并安装 .pts（纯文件操作）
+python -m ptmcp start            # 若未运行则拉起 PT，并等待脚本引擎上线
+python tests/headless.py         # 冷启动 → 建图 → 全绿 → 断言 → 存 .pkt → 截图
+```
+
+冷启动实测（先 `taskkill` 掉 PT，再全自动跑，两次结果一致）：
+
+```
+[1/6] killing any running Packet Tracer...
+[2/6] launching Packet Tracer (no GUI automation)... engine alive after 4.4s
+[3/6] building the topology...        15 devices / 14 links in 72.2s
+[4/6] waiting for every link to come up... all_up=True after 0.3s
+[5/6] assertions...                   41 passed / 0 failed
+[6/6] saving .pkt + screenshot (PrintWindow, no input)...
+       C:\pt\campus_v1.pkt (70,313 bytes)  +  C:\pt\campus_v1.png
+```
+
+截图不再是 computer-use：`ptmcp/shot.py` 用 Win32 `PrintWindow(PW_RENDERFULLCONTENT)`
+把窗口渲染到位图再转 PNG —— 不移动鼠标、不发送按键、不用 UIA，PT 被遮挡也能拍。
+
+### 这一轮修掉的真实缺陷：冷启动丢配置
+
+冷启动时 `vlan 10 / name USERS` 会**静默丢失**：交换机还在 boot，CLI 送进去被丢弃。
+现在 `build()` 分两阶段：先建设备/链路/IP，再 `wait_ready()` 轮询 `isBooting()` 直到设备就绪，
+最后才下发 CLI。代价是冷启动建图时间从 7s 变成 ~72s（等设备启动），热启动仍是 8s 级。

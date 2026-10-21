@@ -116,12 +116,10 @@ def main() -> int:
     print(f"PT running : {running}")
     print(f"engine     : {'ALIVE' if bridge.alive() else 'not polling'}")
     if not bridge.alive():
-        print(
-            "\nOne-time GUI step (PT has no silent module registration):\n"
-            "  Packet Tracer > Extensions > Scripting > Configure PT Script Modules\n"
-            "  > select 'MCP BUILDER' > Settings > 'On Startup' > Start\n"
-            "After that, every later session is fully headless."
-        )
+        print("\nPT is not polling yet. Run `python -m ptmcp start` - PT auto-loads "
+              "script modules from <install>\\extensions\\ at launch, so no GUI step "
+              "is normally needed. If it still does not poll, register once via\n"
+              "  Extensions > Scripting > Configure PT Script Modules > MCP BUILDER > Start")
         return 2
     print("ready: run `python -m ptmcp serve` for the MCP server")
     return 0

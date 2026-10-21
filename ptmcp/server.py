@@ -13,7 +13,7 @@ import json
 
 from mcp.server.fastmcp import FastMCP
 
-from . import bridge, ops, pt, state, ui
+from . import bridge, ops, pt, shot, state, ui
 
 mcp = FastMCP(
     "packet-tracer",
@@ -262,3 +262,10 @@ def pt_fix_loop(spec_json: str, rounds: int = 3) -> str:
     from .fix import fix_loop
     return json.dumps(fix_loop(json.loads(spec_json), rounds=rounds),
                       ensure_ascii=False, indent=2)
+
+
+@mcp.tool()
+def pt_screenshot(path: str) -> str:
+    """Save a PNG of the Packet Tracer window. No mouse/keyboard involved."""
+    from .shot import capture
+    return capture(path)

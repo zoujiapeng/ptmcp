@@ -21,7 +21,28 @@ import json
 import sys
 from pathlib import Path
 
-from . import bridge, ops, pt, state, ui
+from . import bridge, ops, pt, shot, state, ui
+
+
+def start_pt() -> str:
+    """Launch Packet Tracer (if needed) and wait for the script engine."""
+    import subprocess
+    import time as _t
+    if bridge.alive():
+        return "already running and polling"
+    exe = r"C:\\Program Files\\Cisco Packet Tracer 8.0\\bin\\PacketTracer.exe"
+    if not Path(exe).exists():
+        from .bootstrap import find_pt
+        root = find_pt()
+        if not root:
+            return "Packet Tracer not found"
+        exe = str(root / "bin" / "PacketTracer.exe")
+    subprocess.Popen([exe])
+    for _ in range(40):
+        _t.sleep(3)
+        if bridge.alive():
+            return "started, engine alive"
+    return "started, but the MCP BUILDER module is not polling (check bootstrap)"
 
 
 def _print(obj) -> None:
@@ -84,6 +105,11 @@ def main(argv: list[str] | None = None) -> int:
     md.add_argument("device")
     md.add_argument("slot", type=int)
     md.add_argument("model")
+
+    sh = sub.add_parser("shot")
+    sh.add_argument("path")
+
+    st = sub.add_parser("start")
 
     mo = sub.add_parser("mode")
     mo.add_argument("mode")
@@ -157,6 +183,8 @@ def main(argv: list[str] | None = None) -> int:
         "panels": lambda: ui.panels(bool(args.left), bool(args.bottom)),
         "window": lambda: ui.window(args.action, args.width, args.height),
         "clip": lambda: ui.clipboard(args.text),
+        "shot": lambda: shot.capture(args.path),
+        "start": lambda: start_pt(),
         "save": lambda: pt.save(args.path),
     }
     if args.cmd in dispatch:
