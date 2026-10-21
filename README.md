@@ -364,3 +364,40 @@ term.run("S1", ["enable", "configure terminal"] + lines)
 `pt_pdu_ping(PC0, PC1)` 能建 PDU、能步进、能读到逐帧状态（`PC0:buffered/PC0:dropped`），
 但**正例也没通过**：把 PC1 也划到 VLAN 2 后仍然 `ok=false`。所以这条现在是"能下发、能观察、
 不能作准"，README 里标记实验性，判定仍以 `pt_asserts` + `pt_verify_l2` 为准。
+
+## 1.9：PDU ping 跑通了（并抓到我自己的两个错）
+
+经过三处修正，`pt_pdu_ping` 现在能给可信结论：
+
+1. **判定规则**：PT 在目的主机上把帧标成 `sent`，回程才在源主机出现 `accepted`。
+   所以成功 = "目的设备上出现过帧" **且** "其后源设备上有 accepted 帧"。
+2. **realtime 等待**：主机启动与 ARP 都发生在实时时钟里；一进仿真模式时钟就冻结。
+   必须先在实时模式等到 `isBooting()=false`，再切仿真步进（否则首帧必丢）。
+3. **模式卫生**：`ping()` 结束一定切回 realtime，否则后续建图/断言全乱。
+
+实测（干净的两主机小实验）：
+
+```
+H1 -> H2: ok=true  reached_destination=true got_reply=true
+trace: H1:buffered → H1:sent → SW:sent → H2:sent → SW:sent → H1:accepted
+```
+
+**它立刻指出了我真实存在的配置问题**（这正是它的价值）：
+
+```
+PC11 -> PC12 : ok=true   ✅ 同 VLAN
+PC21 -> SRV1 : ok=false  ❌ R1:dropped   （服务器在 A2 后面，走 R1 Gi0/2.30）
+PC11 -> PC41 : ok=false  ❌ R2:dropped   （跨路由器，OSPF 路径）
+```
+
+`SRV1` 原本被我配在 `10.30.0.0/24`，但它实际挂在 `R1 Gi0/2` 这条链路的 VLAN30
+（`10.31.0.0/24`）——**是 spec 写错了**，已改成 `10.31.0.10/24`。跨路由器那条
+（`PC41`）仍未通，说明 `R1↔R2` 的 OSPF 没有真正起效，这是下一个要查的点。
+
+### 一个我自己造出来的坑（已回滚）
+
+为了让 CLI 更稳，我曾加过"读终端模式，不是 config 就补 enable/configure terminal"。
+结果 **`getIpcTerminalLine().getMode()` 会把还没初始化的控制台弄坏**：之后所有设备的
+`getPrompt()` 都变空，`enterCommand` 变成静默 no-op，配置全部不生效。
+已回滚成 PTBuilder 的 `enterCommand("!", "global")`，配置立刻恢复（`hostname applied: True`，
+prompt 变回 `S1(config)#`）。教训：**没初始化前不要碰终端对象**。

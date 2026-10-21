@@ -119,6 +119,8 @@ def build(spec: dict, new: bool = True, save_to: str | None = None) -> dict:
     lines: list[str] = []
     if new:
         lines.append("ipc.appWindow().fileNew(false);")
+    lines.append("try { var __sim = ipc.simulation();"
+                 " if (__sim.isSimulationMode()) __sim.setSimulationMode(false); } catch (e) {}")
     lines.append(_prelude())
 
     for dev in spec.get("devices", []):
@@ -194,11 +196,47 @@ throw new Error("cli {dev}: " + cmds.length + " cmds");
         from .asserts import check as _check
         try:
             report["asserts"] = _check(spec)
+            # Self-heal: cold starts can drop a few CLI lines, so re-run the
+            # declared assertions and repair instead of reporting a half-built lab.
+            if not report["asserts"].get("ok"):
+                from .fix import fix_loop as _fix
+                report["self_heal"] = _fix(spec, rounds=2)
+                report["asserts_after_heal"] = _check(spec)
+                report["asserts"] = report["asserts_after_heal"]
         except Exception as exc:                               # noqa: BLE001
             report["asserts"] = {"ok": None, "error": str(exc)}
     if save_to:
         report["save"] = save(save_to)
     return report
+
+
+def wait_cli_ready(names: list[str], timeout: float = 90.0, interval: float = 2.0) -> dict:
+    """Wait until each device's CLI shell reports a prompt.
+
+    `enterCommand` is a silent no-op while the device's console app has not
+    started (getPrompt() returns ""), which is what made cold-start config vanish
+    even though isBooting() was already false.
+    """
+    arr = ", ".join(q(n) for n in names)
+    js = _prelude() + f"""
+var names = [{arr}];
+var pending = [];
+for (var i = 0; i < names.length; i++) {{
+  var d = ipc.network().getDevice(names[i]);
+  if (!d) {{ pending.push(names[i] + ":missing"); continue; }}
+  var pr = "";
+  try {{ pr = d.getIpcTerminalLine().getPrompt(); }} catch (e) {{ pr = ""; }}
+  if (!pr) pending.push(names[i]);
+}}
+throw new Error(pending.join(","));
+"""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        pending = (ask(js, timeout=20) or "").strip()
+        if not pending:
+            return {"ready": True}
+        time.sleep(interval)
+    return {"ready": False, "no_prompt": pending.split(",")}
 
 
 def wait_ready(names: list[str], timeout: float = 45.0, interval: float = 2.0) -> dict:
@@ -365,5 +403,4 @@ throw new Error(out.join(";"));
             "b": f"{f[5]}:{f[6]}", "b_up": f[7] == "1", "b_mode": int(f[8]), "b_vlan": int(f[9]),
         })
     return {"links": rows}
-
 

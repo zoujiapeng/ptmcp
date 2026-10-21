@@ -1,0 +1,15 @@
+{
+  "devices": [
+    {"name": "SW", "model": "2960-24TT", "x": 300, "y": 200},
+    {"name": "H1", "model": "PC-PT", "x": 200, "y": 380},
+    {"name": "H2", "model": "PC-PT", "x": 400, "y": 380}
+  ],
+  "links": [
+    {"a": "SW", "a_port": "FastEthernet0/1", "b": "H1", "b_port": "FastEthernet0"},
+    {"a": "SW", "a_port": "FastEthernet0/2", "b": "H2", "b_port": "FastEthernet0"}
+  ],
+  "ips": [
+    {"device": "H1", "port": "FastEthernet0", "ip": "192.168.50.1", "mask": "255.255.255.0"},
+    {"device": "H2", "port": "FastEthernet0", "ip": "192.168.50.2", "mask": "255.255.255.0"}
+  ]
+}
