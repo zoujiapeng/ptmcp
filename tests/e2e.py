@@ -12,7 +12,7 @@ import ptmcp.pt as pt  # noqa: E402
 
 def run(spec_path: str) -> None:
     spec = json.loads(Path(spec_path).read_text(encoding="utf-8"))
-    res = pt.build(spec)
+    res = pt.build(spec, save_to=spec.get("save"))
     print("BUILD:", res["build"][:500])
     print("LINKS:", json.dumps(res.get("link_check"), ensure_ascii=False))
     print("SAVE :", res.get("save"))
