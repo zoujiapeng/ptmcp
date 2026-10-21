@@ -151,3 +151,47 @@ def routing(name: str) -> dict:
             else:
                 current["lines"].append(line)
     return out
+
+def interface_config(name: str) -> dict:
+    """Per-interface config parsed from running-config (works when the port API
+    refuses, e.g. -1 admin mode on some 3560 FastEthernet ports).
+
+    -> {"FastEthernet0/1": {"mode": "trunk"|"access"|None, "access_vlan": int|None,
+                            "native": int|None, "shutdown": bool}}
+    """
+    cfg = running_config(name)
+    out: dict[str, dict] = {}
+    cur = None
+    for raw in cfg.splitlines():
+        line = raw.strip()
+        low = line.lower()
+        if low.startswith("interface "):
+            cur = _long_if(line.split(" ", 1)[1].strip())
+            out[cur] = {"mode": None, "access_vlan": None, "native": None, "shutdown": False}
+            continue
+        if cur is None:
+            continue
+        if low in ("!", ""):
+            continue
+        if low.startswith("switchport mode "):
+            out[cur]["mode"] = line.split()[-1].lower()
+        elif low.startswith("switchport access vlan "):
+            out[cur]["access_vlan"] = int(line.split()[-1])
+        elif low.startswith("switchport trunk native vlan "):
+            out[cur]["native"] = int(line.split()[-1])
+        elif low == "shutdown":
+            out[cur]["shutdown"] = True
+    return out
+
+
+def _long_if(short: str) -> str:
+    """'Fa0/1' -> 'FastEthernet0/1', 'Gi0/1' -> 'GigabitEthernet0/1'."""
+    longs = ("FastEthernet", "GigabitEthernet", "Ethernet", "Serial", "Vlan")
+    if short.startswith(longs):
+        return short                      # already long form in running-config
+    table = (("FastEthernet", "Fa"), ("GigabitEthernet", "Gi"),
+             ("Ethernet", "Et"), ("Serial", "Se"))
+    for long_name, prefix in table:
+        if short.startswith(prefix):
+            return long_name + short[len(prefix):]
+    return short

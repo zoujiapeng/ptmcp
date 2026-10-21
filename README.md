@@ -227,3 +227,25 @@ fixloop：
 ```
 
 一轮就能收敛，因为修复同时改**运行态属性**（立即生效，链路判定用）和**下发 CLI**（重启后仍然成立）。
+
+## 1.5：全新复杂拓扑实测（园区双核心）
+
+`specs/campus.json`：**15 设备 / 14 链路** —— 2×2911（单臂路由，VLAN10+30 各两条子接口 + OSPF）、4×2960 接入（trunk 上行）、8 台 PC + 1 台服务器。
+
+```
+python -m ptmcp build specs\campus.json
+→ precheck: True | allUp: True | asserts: 41 passed / 0 failed | 7.2s
+→ saved C:\pt\campus_v1.pkt (70,377 bytes)
+```
+
+用到的断言：4 个 trunk 检查、3 个 access VLAN、3 组同 VLAN 可达、1 组跨 VLAN 隔离、2 个 VLAN 库存在性。
+
+过程中真实遇到并修掉的坑：
+
+1. **3560-24PS 没有 Gi0/3-4**（只有 24×Fa + 2×Gi），我第一版把上行接在不存在的端口上 → 4 条链路凭空消失。precheck 的 live 检查在建新画布时是跳过的，所以没拦住——这是已知盲点，改进方向是给每个型号内置端口表。
+2. **PT 8 的 3560 不接受 `switchport` 系列命令**（`no switchport` 可以，反向不行），trunk 配不上。最后改用 2911 单臂路由（成熟可靠），3560 这类设备在 PT 8 上的 L3 交换配置仍属未打通项。
+3. **3560 的 FastEthernet 端口对象没有 `getAdminOpMode`**（返回 -1），导致断言误判。已加**运行配置回退**：API 拿不到就用 `show run` 里的 `switchport mode trunk` 判定，并修了 `_long_if` 把 `FastEthernet0/1` 误转成 `FastEthernetstEthernet0/1` 的 bug。
+
+### 已知小瑕疵
+
+`pt_save` 为规避覆盖弹窗会先写临时名再改名，因此 **PT 标题栏显示的是临时文件名**（`...tmp.pkt`），磁盘上的 `campus_v1.pkt` 是正确的；重开该文件标题即正常。
